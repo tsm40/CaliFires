@@ -1,0 +1,167 @@
+:root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+
+    color: #e0e0e0;
+    background-color: #1e1e1e;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin-left: 20px;
+    display: block;
+    place-items: left;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+h1 {
+    font-size: 2em;
+    line-height: 1.1;
+    text-align: center;
+}
+
+a {
+    font-weight: 500;
+    color: #4dabf7;
+    text-decoration: inherit;
+}
+
+a:hover {
+    color: #70c1ff;
+}
+
+#app {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.logo {
+    height: 6em;
+    padding: 1.5em;
+    will-change: filter;
+    transition: filter 300ms;
+}
+
+.logo:hover {
+    filter: drop-shadow(0 0 2em #4dabf7aa);
+}
+
+.logo.vanilla:hover {
+    filter: drop-shadow(0 0 2em #f7df1eaa);
+}
+
+.card {
+    padding: 2em;
+}
+
+.read-the-docs {
+    color: #888;
+}
+
+button {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: #333333;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: border-color 0.25s;
+}
+
+button:hover {
+    border-color: #4dabf7;
+}
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 8px;
+    font-size: 18px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #e0e0e0;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.hovered {
+    opacity: 1;
+}
+
+.active {
+    stroke: #e0e0e0;
+    stroke-width: 4;
+}
+
+.chart-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+.controls div {
+    display: flex;
+    flex-direction: column;
+}
+
+select {
+    margin-top: 5px;
+}
+
+.selected {
+    opacity: 1;
+    fill: #4dabf7;
+    stroke: #e0e0e0;
+    stroke-width: 2px;
+}
+
+g.axis text,
+g.x-axis text,
+g.y-axis text {
+    font-size: 25px;
+}
+
+#charts {
+    display: grid;
+    place-items: center;
+    grid-template-columns: 1fr 1fr; 
+    grid-template-rows: auto auto; 
+    gap: 20px; 
+    max-width: 90vw;
+    margin: auto;
+    color: white;
+}
+
+#charts div {
+    display: grid;
+    place-items: center;
+    width: 100%; 
+    height: 550px; 
+    border: 1px solid #ccc; 
+    padding: 10px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); 
+}
+
+#charts text {
+    fill: white !important; 
+}
