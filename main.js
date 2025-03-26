@@ -1,7 +1,7 @@
 const MARGIN = { TOP: 20, RIGHT: 80, BOTTOM: 20, LEFT: 80 },
     PADDING = { TOP: 60, RIGHT: 60, BOTTOM: 150, LEFT: 60 },
     WIDTH = 1000,
-    HEIGHT = 600,
+    HEIGHT = 800,
     OUTER_WIDTH = WIDTH - MARGIN.LEFT - MARGIN.RIGHT,
     OUTER_HEIGHT = HEIGHT - MARGIN.TOP - MARGIN.BOTTOM,
     INNER_WIDTH = OUTER_WIDTH - PADDING.LEFT - PADDING.RIGHT,
@@ -75,14 +75,22 @@ function drawBarChart(data) {
         .attr("height", d => INNER_HEIGHT - yScale(d.count))
         .style("fill", d => colorScale(d.category))
         .on("mouseover", function (event, d) {
-            console.log(d)
             tooltip.style("opacity", .9);
-            tooltip.html(d.count + " properties")})
+            tooltip.html(d.count + " properties");
+            d3.selectAll(".map-circle")
+            .transition().duration(200)
+            d3.selectAll(".map-circle")
+            .style("display", circle => (circle["* Damage"] === d.category) ? null : "none");
+        })
         .on("mouseout", function (d) {
-            tooltip.style("opacity", 0);})
+            tooltip.style("opacity", 0);
+            d3.selectAll(".map-circle")
+            .style("display", null);
+        })
         .on("mousemove", function (event, d) {
             tooltip.style("left", (event.pageX) + "px")
                 .style("top", (event.pageY - 28) + "px")});
+
     
 
     // Create Axes
@@ -141,10 +149,17 @@ function drawScatterMap(topoData, wildfireData) {
     const geoData = topojson.feature(topoData, topoData.objects.calicounties2);
 
     // Define Projection and Path
-    const projection = d3.geoMercator()
+    /*const projection = d3.geoMercator()
         .center([-119.5, 37.5])
         .scale(4000)
-        .translate([INNER_WIDTH / 3, INNER_HEIGHT / 2]);
+        .translate([INNER_WIDTH / 3, INNER_HEIGHT / 2]);*/
+
+    const projection = d3.geoMercator()
+    .center([-133.5, 54.5])
+    .scale(3000)
+    .translate([INNER_WIDTH / 3, INNER_HEIGHT / 2])
+    .rotate([0, 0, -20]); 
+
 
     const geoPath = d3.geoPath().projection(projection);
 
@@ -168,6 +183,8 @@ function drawScatterMap(topoData, wildfireData) {
     innerG.selectAll("circle")
         .data(newData)
         .join("circle")
+        .attr("class", "map-circle")
+        .attr("data-damage", d => d["* Damage"] || "Unknown")
         .attr("cx", d => projection([d.Longitude, d.Latitude])[0])
         .attr("cy", d => projection([d.Longitude, d.Latitude])[1])
         .attr("r", d => sizeScale(d["Assessed Improved Value (parcel)"]))
@@ -341,6 +358,6 @@ Promise.all([
 ]).then(([wildfireData, geojsonData]) => {
     drawBarChart(wildfireData);
     drawScatterMap(geojsonData, wildfireData);
-    //drawLineGraph(wildfireData);
-    //drawTreemap(wildfireData);
+    drawLineGraph(wildfireData);
+    drawTreemap(wildfireData);
 }).catch(error => console.error('Error loading data:', error));
