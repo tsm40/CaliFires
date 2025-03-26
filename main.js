@@ -7,9 +7,11 @@ const MARGIN = { TOP: 20, RIGHT: 80, BOTTOM: 20, LEFT: 80 },
     INNER_WIDTH = OUTER_WIDTH - PADDING.LEFT - PADDING.RIGHT,
     INNER_HEIGHT = OUTER_HEIGHT - PADDING.TOP - PADDING.BOTTOM;
 
-let outerG, innerG;
+//let outerGbar, innerGbar, outerGmap, innerGmap, outerGline, innerGline, outerGtree, innerGtree;
+//let outerG, innerG;
 
 function init(chartType) {
+    let outerG, innerG;
     outerG = d3
         .select(chartType)  // Ensure the correct div ID is selected
         .append("svg")
@@ -21,7 +23,7 @@ function init(chartType) {
     innerG = outerG.append("g")
         .attr("transform", `translate(${PADDING.LEFT}, ${PADDING.TOP})`);
 
-    return innerG;
+    return {outerG, innerG};
 }
 
 function drawBarChart(data) {
@@ -29,7 +31,7 @@ function drawBarChart(data) {
         console.error("ERROR: No data loaded. (drawBarChart)");
         return;}
 
-    const innerG = init("#bar-chart");
+    const {outerG, innerG} = init("#bar-chart");
 
     // Process Data
     const damageCounts = d3.rollup(data, v => v.length, d => d["* Damage"]);
@@ -54,6 +56,14 @@ function drawBarChart(data) {
     };
     const colorScale = d => colorMapping[d] || "#FFFFFF";
 
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("opacity", 0)
+        .style("background", "black")
+        .style("pointer-events", "none"); 
+
+
     // Bars
     innerG.selectAll(".bar")
         .data(damageArray)
@@ -63,7 +73,17 @@ function drawBarChart(data) {
         .attr("y", d => yScale(d.count))
         .attr("width", xScale.bandwidth())
         .attr("height", d => INNER_HEIGHT - yScale(d.count))
-        .style("fill", d => colorScale(d.category));
+        .style("fill", d => colorScale(d.category))
+        .on("mouseover", function (event, d) {
+            console.log(d)
+            tooltip.style("opacity", .9);
+            tooltip.html(d.count + " properties")})
+        .on("mouseout", function (d) {
+            tooltip.style("opacity", 0);})
+        .on("mousemove", function (event, d) {
+            tooltip.style("left", (event.pageX) + "px")
+                .style("top", (event.pageY - 28) + "px")});
+    
 
     // Create Axes
     innerG.append("g")
@@ -112,7 +132,7 @@ function drawScatterMap(topoData, wildfireData) {
         console.error("ERROR: No data loaded. (drawScatterMap)");
         return;}
 
-    const innerG = init("#scattermap");
+    const {outerG, innerG} = init("#scattermap");
 
     // Filter wildfire data with valid coordinates
     const newData = wildfireData.filter(d => d.Latitude && d.Longitude);
@@ -124,7 +144,7 @@ function drawScatterMap(topoData, wildfireData) {
     const projection = d3.geoMercator()
         .center([-119.5, 37.5])
         .scale(4000)
-        .translate([INNER_WIDTH / 2, INNER_HEIGHT / 2]);
+        .translate([INNER_WIDTH / 3, INNER_HEIGHT / 2]);
 
     const geoPath = d3.geoPath().projection(projection);
 
@@ -144,7 +164,7 @@ function drawScatterMap(topoData, wildfireData) {
         .domain(d3.extent(newData, d => d["Assessed Improved Value (parcel)"]))
         .range([2, 10]);
 
-    // Draw Scatterplot Circles
+    // Draw Scattermap Circles
     innerG.selectAll("circle")
         .data(newData)
         .join("circle")
@@ -156,7 +176,7 @@ function drawScatterMap(topoData, wildfireData) {
 
     // Chart Title
     outerG.append("text")
-        .attr("x", OUTER_WIDTH / 2 + 300)
+        .attr("x", 7 * OUTER_WIDTH / 10)
         .attr("y", 100)
         .attr("text-anchor", "middle")
         .style("font-size", "24px")
@@ -169,7 +189,7 @@ function drawLineGraph(data) {
         console.error("ERROR: No data loaded. (drawLineGraph)");
         return;}
 
-    const lineInnerG = init("#line-graph");
+    const {outerG, innerG} = init("#line-graph");
 
     // data wrangling
     data = data.filter(d => d["Year Built (parcel)"] && !isNaN(d["Year Built (parcel)"]));
@@ -193,7 +213,7 @@ function drawLineGraph(data) {
         .curve(d3.curveMonotoneX);
 
     // Draw the line path
-    lineInnerG.append("path")
+    innerG.append("path")
         .datum(yearData)
         .attr("fill", "none")
         .attr("stroke", "steelblue")
@@ -201,14 +221,14 @@ function drawLineGraph(data) {
         .attr("d", line);
 
     // Axes
-    lineInnerG.append("g")
+    innerG.append("g")
         .attr("class", "x-axis")
         .attr("transform", `translate(0, ${INNER_HEIGHT})`)
         .call(d3.axisBottom(xScale).ticks(10))
         .selectAll("text")
         .style("font-size", "16px");
 
-    lineInnerG.append("g")
+    innerG.append("g")
         .attr("class", "y-axis")
         .call(d3.axisLeft(yScale))
         .selectAll("text")
@@ -243,61 +263,65 @@ function drawLineGraph(data) {
 function drawTreemap(data) {
     if (!data || data.length === 0) {
         console.error("ERROR: No data loaded. (drawTreemap)");
-        return;}
+        return;
+    }
 
-    // Aggregate data by county
+    const {outerG, innerG} = init("#treemap");
+
+    // Process Data
     const fireCounts = d3.rollup(data.filter(d => d["County"]), v => v.length, d => d["County"]);
-    const fireArray = Array.from(fireCounts, ([key, value]) => ({ county: key, count: value }));
+    const fireArray = Array.from(fireCounts, ([county, count]) => ({ county, count }));
 
-    // Create the SVG canvas
-    const treemapSvg = d3.select("#treemap").append("svg")
-        .attr("width", INNER_WIDTH)
-        .attr("height", INNER_HEIGHT);
+    // color scale
+    const colorScale = d3.scaleSequential(d3.interpolateOranges)
+        .domain([d3.min(fireArray, d => d.count), d3.max(fireArray, d => d.count)]);
 
-    // Define the treemap layout
+    // Define Treemap Layout
     const treemap = d3.treemap()
-        .size([1000, 1000])
-        .padding(1);
+        .size([INNER_WIDTH, 500]);
 
-    // Create the hierarchy for treemap
+    // Create Hierarchy
     const root = d3.hierarchy({ name: "Wildfires", children: fireArray })
         .sum(d => d.count);
 
     treemap(root);
 
-    // Draw the rectangles
-    treemapSvg.selectAll("rect")
+    // Draw Rectangles
+    innerG.selectAll(".tile")
         .data(root.leaves())
-        .enter().append("rect")
+        .join("rect")
+        .attr("class", "tile")
         .attr("x", d => d.x0)
         .attr("y", d => d.y0)
         .attr("width", d => d.x1 - d.x0)
         .attr("height", d => d.y1 - d.y0)
-        .attr("fill", "orange")
+        .attr("fill", d => colorScale(d.data.count))
         .attr("stroke", "#fff");
 
-    // Add text labels to the boxes
-    treemapSvg.selectAll("text")
+    // Add Labels
+    innerG.selectAll(".tile-text")
         .data(root.leaves())
-        .enter().append("text")
+        .join("text")
+        .attr("class", "tile-text")
         .attr("x", d => (d.x0 + d.x1) / 2)
         .attr("y", d => (d.y0 + d.y1) / 2)
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
         .style("fill", "black")
-        .style("font-size", "20px")
+        .style("font-size", "16px")
         .style("pointer-events", "none")
         .text(d => d.data.county.length > 10 ? d.data.county.substring(0, 10) + "..." : d.data.county);
 
     // Chart Title
     outerG.append("text")
         .attr("x", INNER_WIDTH / 2)
-        .attr("y", 30)
+        .attr("y", 20)
         .attr("text-anchor", "middle")
         .style("font-size", "24px")
         .style("font-weight", "bold")
-        .text("Wildfire Distribution by County");
+        .text("Wildfire Incidents by County");
 }
+
 
 // scroll indicator
 window.addEventListener("scroll", () => {
@@ -317,6 +341,6 @@ Promise.all([
 ]).then(([wildfireData, geojsonData]) => {
     drawBarChart(wildfireData);
     drawScatterMap(geojsonData, wildfireData);
-    drawLineGraph(wildfireData);
-    drawTreemap(wildfireData);
+    //drawLineGraph(wildfireData);
+    //drawTreemap(wildfireData);
 }).catch(error => console.error('Error loading data:', error));
