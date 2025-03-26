@@ -133,6 +133,15 @@ function drawBarChart(data) {
         .style("font-size", "24px")
         .style("font-weight", "bold")
         .text("Wildfire Damage Category Counts");
+    
+    // Chart Description
+    outerG.append("text")
+        .attr("x", INNER_WIDTH / 2)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text("Hover over the bars to highlight properties on the map and see exact value.");
 }
 
 function drawScatterMap(topoData, wildfireData) {
@@ -199,9 +208,25 @@ function drawScatterMap(topoData, wildfireData) {
         .style("font-size", "24px")
         .style("font-weight", "bold")
         .text("Wildfire Damage ScatterMap");
+    
+    // Chart Description
+    outerG.append("text")
+        .attr("x", 7 * OUTER_WIDTH / 10)
+        .attr("y", 130)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text("Hover over the bars to highlight properties on the map and see exact value.");
+    outerG.append("text")
+        .attr("x", 7 * OUTER_WIDTH / 10)
+        .attr("y", 155)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text("Map may take a moment to load due to large dataset size.");
 }
 
-function drawLineGraph(data) {
+function drawLineGraph(data, yearMin = 1900, yearMax = 2025) {
     if (!data || data.length === 0) {
         console.error("ERROR: No data loaded. (drawLineGraph)");
         return;}
@@ -209,10 +234,13 @@ function drawLineGraph(data) {
     const {outerG, innerG} = init("#line-graph");
 
     // data wrangling
-    data = data.filter(d => d["Year Built (parcel)"] && !isNaN(d["Year Built (parcel)"]));
+    data = data.filter(d => {
+        const year = +d["Year Built (parcel)"];
+        return year && !isNaN(year) && year >= yearMin && year <= yearMax;
+    });
     const yearCounts = d3.rollup(data, v => v.length, d => d["Year Built (parcel)"]);
-    const yearData = Array.from(yearCounts, ([year, count]) => ({ year: +year, count }));
-    yearData.sort((a, b) => a.year - b.year);
+    const yearData = Array.from(yearCounts, ([year, count]) => ({ year: +year, count }))
+        .sort((a, b) => a.year - b.year);    
 
     // Scales
     const xScale = d3.scaleTime()
@@ -270,14 +298,64 @@ function drawLineGraph(data) {
     // Chart Title
     outerG.append("text")
         .attr("x", INNER_WIDTH / 2)
-        .attr("y", 30)
+        .attr("y", 20)
         .attr("text-anchor", "middle")
         .style("font-size", "24px")
         .style("font-weight", "bold")
         .text("Wildfire-Affected Properties by Year Built");
+
+    // Chart Description
+        outerG.append("text")
+        .attr("x", INNER_WIDTH / 2)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text("Adjust the slider to zoom in and out of the line graph.");
 }
 
-function drawTreemap(data) {
+function updateLineGraph(data, yearMin, yearMax) {
+    // Filter
+    const filtered = data.filter(d => {
+        const y = +d["Year Built (parcel)"];
+        return y && !isNaN(y) && y >= yearMin && y <= yearMax;
+    });
+    const yearCounts = d3.rollup(filtered, v => v.length, d => d["Year Built (parcel)"]);
+    const yearData = Array.from(yearCounts, ([year, count]) => ({ year: +year, count }))
+        .sort((a, b) => a.year - b.year);
+
+    const xScale = d3.scaleTime()
+        .domain(d3.extent(yearData, d => new Date(d.year, 0, 1))).nice()
+        .range([0, INNER_WIDTH]);
+
+    const yScale = d3.scaleLinear()
+        .domain([0, d3.max(yearData, d => d.count)]).nice()
+        .range([INNER_HEIGHT, 0]);
+
+    const line = d3.line()
+        .x(d => xScale(new Date(d.year, 0, 1)))
+        .y(d => yScale(d.count))
+        .curve(d3.curveMonotoneX);
+
+    // Update line
+    d3.select("#line-graph path")
+        .datum(yearData)
+        .transition().duration(800)
+        .attr("d", line);
+
+    // Update axes
+    d3.select("#line-graph .x-axis")
+        .transition().duration(800)
+        .call(d3.axisBottom(xScale).ticks(10));
+
+    d3.select("#line-graph .y-axis")
+        .transition().duration(800)
+        .call(d3.axisLeft(yScale));
+}
+
+
+
+function drawTreemap(data, groupBy = "Roof Construction") {
     if (!data || data.length === 0) {
         console.error("ERROR: No data loaded. (drawTreemap)");
         return;
@@ -285,9 +363,13 @@ function drawTreemap(data) {
 
     const {outerG, innerG} = init("#treemap");
 
-    // Process Data
-    const fireCounts = d3.rollup(data.filter(d => d["County"]), v => v.length, d => d["County"]);
-    const fireArray = Array.from(fireCounts, ([county, count]) => ({ county, count }));
+    const fireCounts = d3.rollup(
+        data.filter(d => d[groupBy]),
+        v => v.length,
+        d => d[groupBy]
+    );
+    const fireArray = Array.from(fireCounts, ([key, count]) => ({ key, count }));
+    
 
     // color scale
     const colorScale = d3.scaleSequential(d3.interpolateOranges)
@@ -295,7 +377,7 @@ function drawTreemap(data) {
 
     // Define Treemap Layout
     const treemap = d3.treemap()
-        .size([INNER_WIDTH, 500]);
+        .size([INNER_WIDTH, INNER_HEIGHT]);
 
     // Create Hierarchy
     const root = d3.hierarchy({ name: "Wildfires", children: fireArray })
@@ -327,7 +409,8 @@ function drawTreemap(data) {
         .style("fill", "black")
         .style("font-size", "16px")
         .style("pointer-events", "none")
-        .text(d => d.data.county.length > 10 ? d.data.county.substring(0, 10) + "..." : d.data.county);
+        .text(d => d.data.key.length > 10 ? d.data.key.substring(0, 10) + "..." : d.data.key);
+
 
     // Chart Title
     outerG.append("text")
@@ -336,7 +419,93 @@ function drawTreemap(data) {
         .attr("text-anchor", "middle")
         .style("font-size", "24px")
         .style("font-weight", "bold")
-        .text("Wildfire Incidents by County");
+        .text(`Wildfire Incidents by ${groupBy}`);
+    
+    // Chart Description
+    outerG.append("text")
+        .attr("x", INNER_WIDTH / 2)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text(`Select a different grouping from the dropdown to see how the data changes.`);
+
+
+    // Legend dims
+    const legendWidth = 200;
+    const legendHeight = 15;
+    const legendX = INNER_WIDTH / 2 - legendWidth / 2;
+    const legendY = INNER_HEIGHT + 100;
+
+    // Create gradient definition
+    const defs = outerG.append("defs");
+    const gradient = defs.append("linearGradient")
+        .attr("id", "legend-gradient")
+        .attr("x1", "0%").attr("x2", "100%")
+        .attr("y1", "0%").attr("y2", "0%");
+
+    gradient.selectAll("stop")
+        .data(d3.ticks(0, 1, 10)) 
+        .join("stop")
+        .attr("offset", d => `${d * 100}%`)
+        .attr("stop-color", d => d3.interpolateOranges(d));
+
+    // Draw the legend bar
+    outerG.append("rect")
+        .attr("x", legendX)
+        .attr("y", legendY)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .style("fill", "url(#legend-gradient)")
+        .style("stroke", "#000");
+
+    // Add min and max labels
+    outerG.append("text")
+        .attr("x", legendX)
+        .attr("y", legendY + 30)
+        .attr("text-anchor", "start")
+        .style("font-size", "14px")
+        .text(d3.min(fireArray, d => d.count));
+    outerG.append("text")
+        .attr("x", legendX + legendWidth)
+        .attr("y", legendY + 30)
+        .attr("text-anchor", "end")
+        .style("font-size", "14px")
+        .text(d3.max(fireArray, d => d.count));
+    outerG.append("text")
+        .attr("x", INNER_WIDTH / 2)
+        .attr("y", legendY - 10)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("font-weight", "bold")
+        .text("Fire Count");
+}
+
+function updateSlider(data) {
+    const yearMinMax = d3.extent(data, d => +d["Year Built (parcel)"]);
+    const yearSlider = document.getElementById("year-slider");
+
+    noUiSlider.create(yearSlider, {
+        start: [1500, yearMinMax[1]],
+        connect: true,
+        range: {
+            min: 1500,
+            max: yearMinMax[1]
+        },
+        step: 1,
+        tooltips: [false, false],
+        format: {
+            to: value => Math.round(value),
+            from: value => Number(value)
+        }
+    });
+
+    yearSlider.noUiSlider.on("update", (values) => {
+        const [minYear, maxYear] = values.map(Number);
+        d3.select("#year-display").text(`${minYear} – ${maxYear}`);
+        updateLineGraph(data, minYear, maxYear);
+    });
+
 }
 
 
@@ -359,5 +528,12 @@ Promise.all([
     drawBarChart(wildfireData);
     drawScatterMap(geojsonData, wildfireData);
     drawLineGraph(wildfireData);
+    updateSlider(wildfireData);
     drawTreemap(wildfireData);
+    d3.select("#groupBy").on("change", function() {
+        const selected = this.value;
+        d3.select("#treemap svg").remove(); 
+        drawTreemap(wildfireData, selected);
+    });
+    
 }).catch(error => console.error('Error loading data:', error));

@@ -192,3 +192,24 @@ g.y-axis text {
     opacity: 0;
     pointer-events: none;
 }
+
+
+#year-slider .noUi-target {
+    height: 0px; 
+}
+
+#year-slider .noUi-connect,
+#year-slider .noUi-base {
+    height: 0px;
+}
+
+#year-slider .noUi-handle {
+    width: 12px;
+    height: 12px;
+    top: -2px; 
+    border-radius: 50%;
+    box-shadow: none;
+    border: 1px solid #555;
+    background-color: #ccc;
+}
+

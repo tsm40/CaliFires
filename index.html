@@ -6,6 +6,8 @@
     <title>California Wildfires</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,6 +18,22 @@
         <div id="scattermap"></div>
         <div id="line-graph"></div>
         <div id="treemap"></div>
+        <div id="line-graph-controls" style="text-align: center; margin-top: 20px;">
+            <label for="year-slider">Year Range:</label>
+            <div id="year-slider" style="margin: 8px auto; width: 60%;"></div>
+            <div id="year-display" style="margin-top: 10px;">1900 – 2025</div>
+        </div>  
+        <div id="treemap-controls" style="text-align: center; margin-top: 20px;">
+            <label for="groupBy">Group By: </label>
+            <select id="groupBy">
+                <option value="Roof Construction">Roof Construction</option>
+                <option value="Structure Category">Structure Category</option>
+                <option value="Exterior Siding">Exterior Siding</option>
+                <option value="Vent Screen" selected>Vent Screen</option>
+                <option value="Fence Attached to Structure" selected>Fence Attached to Structure</option>
+                <option value="County" selected>County</option>
+            </select>
+        </div>
     </div>
 
     <script src="main.js"></script> 
